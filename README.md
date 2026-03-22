@@ -16,6 +16,14 @@ Furthermore, the project implements an advanced control loop where a Large Langu
 
 ---
 ## 2. Theoretical background/technology stack
+### 2.1. Extended Berkeley Packet Filter (eBPF)
+Extended Berkeley Packet Filter (eBPF) is a powerful technology built into the Linux kernel that allows sandboxed programs to run inside the operating system kernel without requiring changes to the kernel source code or loading kernel modules.
+
+eBPF programs are safe, as they are complied for their own Virtual Machine instruction set and then can run in sandbox environment that pre-verifies each loaded program for safe memory access and finite execution time.
+
+The eBPF code is loaded from ordinary programs running in user space. Both kernel and user space programs can share information through set of communication machanisms that are provided by the eBPF specification, such as ring buffers, arrays, hash maps, etc.
+
+![alt text](image.png)
 
 ## 3. Case study concept description, Application/Observability/Vizualization
 
