@@ -19,7 +19,7 @@ Furthermore, the project implements an advanced control loop where a Large Langu
 ### 2.1. Extended Berkeley Packet Filter (eBPF)
 Extended Berkeley Packet Filter (eBPF) is a powerful technology built into the Linux kernel that allows sandboxed programs to run inside the operating system kernel without requiring changes to the kernel source code or loading kernel modules.
 
-eBPF programs are safe, as they are complied for their own Virtual Machine instruction set and then can run in sandbox environment that pre-verifies each loaded program for safe memory access and finite execution time.
+eBPF programs are safe, as they are compiled for their own Virtual Machine instruction set and then can run in sandbox environment that pre-verifies each loaded program for safe memory access and finite execution time.
 
 The eBPF code is loaded from ordinary programs running in user space. Both kernel and user space programs can share information through set of communication machanisms that are provided by the eBPF specification, such as ring buffers, arrays, hash maps, etc.
 
@@ -48,6 +48,7 @@ Within this pipeline, Prometheus functions as the highly efficient time-series d
 
 Grafana provides a comprehensive visualization layer, rendering the collected data into highly intuitive dashboards in real-time. Additionally, Grafana Assistance makes it easier for operators to manage the system and interpret the gathered data.
 
+---
 ## 3. Case study concept description
 
 ### Application
@@ -59,7 +60,48 @@ Simultaneously, the observability layer relies on Grafana Beyla, which operates 
 ### Visualization
 In the final stage of the pipeline, the data is forwarded to the visualization layer. Grafana (either OSS or Cloud version) seamlessly synthesizes these raw metrics retrieved from Prometheus, presenting them on comprehensive dashboards. These visualizations, further supported by Grafana Assistance, actively correlate the actions performed by the LLM with the resulting performance metrics, demonstrating the effectiveness of eBPF-based observability.
 
+---
 ## 4. Case study high level architecture
+
+The proposed system architecture is organized into three distinct layers: the application layer, the observability layer, and the visualization layer. This layered structure ensures a clear separation of responsibilities between system control, monitoring, and data presentation. The architecture combines AI-driven application management with non-intrusive observability and real-time visualization, forming a cohesive and modern approach to system analysis.
+
+Unlike the conceptual description presented in the previous section, this section focuses on the structural organization of the system and the relationships between its components, emphasizing its layered architecture and data flows.
+
+To better illustrate the relationships between the components and the overall system structure, the high-level architecture is shown in the diagram below.
+
+![High-level architecture](image3.png)
+
+### Application Layer
+
+The application layer represents the core operational part of the system and is responsible for executing application logic under the control of an AI agent. This layer consists of a Large Language Model (LLM), the LangChain orchestration framework, the Model Context Protocol (MCP) Server, and the target application.
+
+These components form a control pipeline in which the LLM generates high-level instructions based on predefined prompts or scenarios. The LangChain framework manages the execution flow and context of these instructions, while the MCP Server translates them into specific API calls or executable actions. The target application then performs these actions, such as handling requests, simulating workloads, or triggering predefined behaviors.
+
+As a result, the application layer establishes an automated control loop in which the AI agent dynamically influences the behavior of the system without requiring manual intervention.
+
+### Observability Layer
+
+The observability layer is responsible for collecting telemetry data from the running application in a fully passive and non-intrusive manner. This layer is built around Grafana Beyla, which leverages eBPF technology to monitor application behavior at the Linux kernel level.
+
+Beyla operates independently of the application code and does not require any instrumentation or configuration changes. It captures essential RED metrics (Rate, Error, Duration) as well as basic trace information by observing network interactions and system calls.
+
+Importantly, this layer does not interfere with the execution of the application. Instead, it continuously collects high-fidelity telemetry data reflecting the real-time impact of the actions performed by the AI agent in the application layer.
+
+### Visualization Layer
+
+The visualization layer provides a user-facing interface for analyzing and interpreting the collected telemetry data. This layer is implemented using Grafana, which presents the monitored metrics through interactive dashboards.
+
+Grafana enables real-time visualization of application performance, including request rates, error occurrences, and response times. By correlating these metrics with the actions initiated by the AI agent, users can evaluate the effectiveness of automated management and observe system behavior under different scenarios.
+
+### System Flow Overview
+
+The architecture defines two primary flows: the control flow and the monitoring flow.
+
+The control flow originates from the LLM and propagates through the LangChain framework and the MCP Server before reaching the target application. This flow represents the active influence of the AI agent on the system, enabling automated execution of operational scenarios.
+
+In parallel, the monitoring flow captures the effects of these actions. The behavior of the application is passively observed by Grafana Beyla, and the collected data is forwarded to the visualization layer, where it is presented in Grafana dashboards.
+
+This dual-flow design creates a feedback loop in which AI-driven actions can be directly correlated with system performance metrics, enabling comprehensive analysis and evaluation.
 
 ## 5. Case study detailed architecture
 
