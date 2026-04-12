@@ -23,7 +23,7 @@ eBPF programs are safe, as they are compiled for their own Virtual Machine instr
 
 The eBPF code is loaded from ordinary programs running in user space. Both kernel and user space programs can share information through set of communication machanisms that are provided by the eBPF specification, such as ring buffers, arrays, hash maps, etc.
 
-![alt text](image.png)
+![alt text](images/image.png)
 
 ### 2.2. Grafana Beyla and Auto-instrumentation
 Grafana Beyla represents a modern approach to application telemetry by utilizing eBPF to provide zero-code auto-instrumentation capabilities. Unlike traditional APM tools that require developers to manually embed language-specific SDKs, Beyla attaches directly to tracepoints at the kernel level.
@@ -39,7 +39,7 @@ To facilitate this autonomous operational strategy, the LangChain framework serv
 
 The Model Context Protocol (MCP) Server acts as the critical bridge in this architecture, translating the intents of the LLM into highly specific API interactions. This standardized protocol ensures that the language model can reliably communicate with the target application and modify its state.
 
-<img src="image2.png" width="300" alt="llm-mcp diagram">
+<img src="images/image2.png" width="300" alt="llm-mcp diagram">
 
 ### 2.4. Telemetry and Visualization Stack
 To make the high-resolution data captured by Beyla actionable, the architecture employs a robust telemetry pipeline built around the OpenTelemetry specification. This standardization ensures maximum interoperability and seamless telemetry data collection across all monitored services.
@@ -69,7 +69,7 @@ Unlike the conceptual description presented in the previous section, this sectio
 
 To better illustrate the relationships between the components and the overall system structure, the high-level architecture is shown in the diagram below.
 
-![High-level architecture](image3.png)
+![High-level architecture](images/image3.png)
 
 ### Application Layer
 
