@@ -1,11 +1,12 @@
 import argparse
 import json
+import os
 from typing import Any
 
 import anyio
 from langchain.agents import AgentType, initialize_agent
 from langchain.tools import StructuredTool
-from langchain_ollama import ChatOllama
+from langchain_google_genai import ChatGoogleGenerativeAI
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
@@ -76,20 +77,15 @@ def make_tools(mcp_url: str) -> list[StructuredTool]:
     ]
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", required=True)
-    parser.add_argument("--model", default="qwen3")
-    parser.add_argument("--ollama-url", default="http://localhost:11434")
-    parser.add_argument("--mcp-url", default="http://localhost:8000/sse")
-    args = parser.parse_args()
+def run_prompt(prompt: str, model: str, mcp_url: str) -> str:
+    if not os.getenv("GOOGLE_API_KEY"):
+        raise RuntimeError("Brak GOOGLE_API_KEY w zmiennych srodowiskowych.")
 
-    llm = ChatOllama(
-        model=args.model,
-        base_url=args.ollama_url,
+    llm = ChatGoogleGenerativeAI(
+        model=model,
         temperature=0,
     )
-    tools = make_tools(args.mcp_url)
+    tools = make_tools(mcp_url)
 
     agent = initialize_agent(
         tools=tools,
@@ -99,8 +95,17 @@ def main() -> int:
         handle_parsing_errors=True,
     )
 
-    final_prompt = f"{SYSTEM_GUIDANCE}\n\nUser request: {args.prompt}"
-    result = agent.run(final_prompt)
+    final_prompt = f"{SYSTEM_GUIDANCE}\n\nUser request: {prompt}"
+    return agent.run(final_prompt)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--prompt", required=True)
+    parser.add_argument("--model", default="gemini-2.5-flash")
+    parser.add_argument("--mcp-url", default="http://localhost:8000/sse")
+    args = parser.parse_args()
+    result = run_prompt(args.prompt, args.model, args.mcp_url)
     print(result)
     return 0
 

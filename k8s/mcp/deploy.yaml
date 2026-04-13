@@ -65,6 +65,10 @@ spec:
           env:
             - name: DEFAULT_NAMESPACE
               value: "app"
+            - name: FASTMCP_HOST
+              value: "0.0.0.0"
+            - name: FASTMCP_PORT
+              value: "8000"
           ports:
             - containerPort: 8000
 ---
@@ -74,9 +78,11 @@ metadata:
   name: mcp-server-service
   namespace: mcp
 spec:
+  type: NodePort
   selector:
     app: mcp-server
   ports:
     - protocol: TCP
       port: 8000
       targetPort: 8000
+      nodePort: 30080

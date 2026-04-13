@@ -9,7 +9,7 @@ from mcp.server.fastmcp import FastMCP
 
 DEFAULT_NAMESPACE = os.getenv("DEFAULT_NAMESPACE", "app")
 
-mcp = FastMCP("k8s-controller")
+mcp = FastMCP("k8s-controller", host="0.0.0.0", port=8000)
 
 _k8s_loaded = False
 
