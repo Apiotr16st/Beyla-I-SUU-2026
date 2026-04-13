@@ -1,0 +1,2 @@
+mcp[cli]
+kubernetes==33.1.0

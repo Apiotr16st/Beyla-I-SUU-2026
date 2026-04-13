@@ -1,0 +1,4 @@
+mcp[cli]
+langchain==0.3.26
+langchain-community==0.3.27
+langchain-ollama
