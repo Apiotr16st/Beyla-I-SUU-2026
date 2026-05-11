@@ -3,6 +3,7 @@
 Ten plik opisuje aktualny, działający wariant projektu:
 
 - aplikacja działa w `k3d`
+- wdrożony jest stos observability (Grafana Beyla, Prometheus, Grafana)
 - serwer MCP działa w Kubernetes
 - serwer MCP jest wystawiony lokalnie bez `port-forward`
 - lokalny `prompt-service` działa w Dockerze
@@ -23,11 +24,12 @@ Aktualny przepływ wygląda tak:
 
 1. `k3d` uruchamia klaster Kubernetes
 2. do klastra wdrażana jest aplikacja `online-boutique`
-3. do klastra wdrażany jest `mcp-server`
-4. `mcp-server` jest wystawiony na lokalnym porcie `8000`
-5. lokalny kontener `prompt-service` wystawia endpoint `POST /prompt` na porcie `8088`
-6. `prompt-service` używa Gemini przez `GOOGLE_API_KEY`
-7. `prompt-service` łączy się z `mcp-server` i wykonuje narzędzia MCP
+3. do klastra wdrażany jest stos monitoringu: Prometheus i Beyla (namespace: `observability`) oraz Grafana (namespace: `visualization`)
+4. do klastra wdrażany jest `mcp-server`
+5. `mcp-server` jest wystawiony na lokalnym porcie `8000`
+6. lokalny kontener `prompt-service` wystawia endpoint `POST /prompt` na porcie `8088`
+7. `prompt-service` używa Gemini przez `GOOGLE_API_KEY`
+8. `prompt-service` łączy się z `mcp-server` i wykonuje narzędzia MCP
 
 ## 3. Utworzenie klastra `k3d`
 
@@ -73,7 +75,29 @@ kubectl get pods -n app
 kubectl get deploy -n app
 ```
 
-## 5. Zbudowanie i wdrożenie serwera MCP
+## 5. Wdrożenie Observability i Wizualizacji
+
+Wdróż agenta Beyla i bazę Prometheus w dedykowanej przestrzeni nazw:
+
+```powershell
+kubectl apply -f .\k8s\observability\
+```
+
+Wdróż Grafanę w przestrzeni nazw wizualizacji:
+
+```powershell
+kubectl apply -f .\k8s\visualization\
+```
+
+Dostęp do dashboardu (zostaw to okno terminala otwarte):
+
+```powershell
+kubectl port-forward svc/grafana 3000:80 -n visualization
+```
+
+Panel jest dostępny pod adresem `http://localhost:3000`. Dashboard Grafana Beyla został zaimportowany automatycznie.
+
+## 6. Zbudowanie i wdrożenie serwera MCP
 
 Zbuduj obraz:
 
@@ -113,7 +137,7 @@ W logach powinno być:
 Uvicorn running on http://0.0.0.0:8000
 ```
 
-## 6. Sprawdzenie działania MCP lokalnie
+## 7. Sprawdzenie działania MCP lokalnie
 
 `mcp-server` powinien być dostępny lokalnie bez `port-forward` przez:
 
@@ -135,7 +159,7 @@ Powinna pojawić się lista narzędzi:
 - `restart_deployment`
 - `set_loadgenerator`
 
-## 7. Ustawienie `GOOGLE_API_KEY`
+## 8. Ustawienie `GOOGLE_API_KEY`
 
 W PowerShell:
 
@@ -149,7 +173,7 @@ Warto sprawdzić, czy zmienna jest ustawiona:
 echo $env:GOOGLE_API_KEY
 ```
 
-## 8. Zbudowanie `prompt-service`
+## 9. Zbudowanie `prompt-service`
 
 Zbuduj obraz:
 
@@ -157,7 +181,7 @@ Zbuduj obraz:
 docker build -t prompt-service:latest .\mcp-server -f .\mcp-server\Dockerfile.prompt
 ```
 
-## 9. Uruchomienie `prompt-service`
+## 10. Uruchomienie `prompt-service`
 
 Uruchom lokalny kontener:
 
@@ -175,7 +199,7 @@ Znaczenie:
 - `MCP_URL` wskazuje na serwer MCP wystawiony lokalnie przez `k3d`
 - `GOOGLE_API_KEY` jest używany przez Gemini
 
-## 10. Test `prompt-service`
+## 11. Test `prompt-service`
 
 Health:
 
@@ -205,7 +229,7 @@ $response = Invoke-RestMethod `
 $response.answer
 ```
 
-## 11. Przykładowe prompty
+## 12. Przykładowe prompty
 
 Lista deploymentów:
 
@@ -247,7 +271,18 @@ Invoke-RestMethod `
   -Body '{"prompt":"Ustaw loadgenerator w namespace app na users 20 i rate 5"}'
 ```
 
-## 12. Weryfikacja zmian w Kubernetes
+Testowanie monitoringu (zwiększenie obciążenia):
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8088/prompt `
+  -ContentType "application/json" `
+  -Body '{"prompt":"Ustaw loadgenerator w namespace app na users 100 i rate 20"}'
+```
+Prompt służy do wygenerowania nagłego skoku ruchu w aplikacji. Pozwala to zweryfikować, czy Beyla poprawnie przechwytuje dane, a Prometheus i Grafana wyświetlają gwałtowny wzrost na wykresach w czasie rzeczywistym.
+
+## 13. Weryfikacja zmian w Kubernetes
 
 Sprawdzenie deploymentów:
 
@@ -273,7 +308,7 @@ Szczegóły loadgeneratora:
 kubectl describe deploy loadgenerator -n app
 ```
 
-## 13. Najczęstsze problemy
+## 14. Najczęstsze problemy
 
 ### `python .\mcp-server\mcp_client.py` zwraca błąd połączenia
 
