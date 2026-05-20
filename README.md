@@ -105,6 +105,89 @@ This dual-flow design creates a feedback loop in which AI-driven actions can be 
 
 ## 5. Case study detailed architecture
 
+This section describes the concrete technical implementation of each componenent and the relationships between them as deployed in the demonstration environment.
+
+### 5.1 Kubernetes Cluster
+The entire solution runs inside a lightweight Kubernetes cluster provisioned with k3d - a tool that runs k3s (a minimal Kubernetes distribution) in Docker containers. The cluster is named beyla-lab and consists of a server node and one agent node. During cluster creation, port 8000 on the host is mapped to NodePort 30080 inside the cluster, enabling external access to the MCP Server without additional port-forwarding.
+
+```k3d cluster create beyla-lab --agents 1 -p "8000:30080@server:0"```
+
+### 5.2 Application Layer - Online Boutique
+The target application is Google's Online Boutique, a microservices-based e-commerce demo application deployed in the app namespace. It consists of multiple services (fronted, cart, product catalog, etc.) communicating via gRPC and HTTP. The applicaiont also includes a load generator deployment whose behavior can be controlled by the AI agent through the MCP Server.
+
+### 5.3 Observability Layer
+The observability layer is deployed in the observability namespace and consists of two components : Grafana Beyla and Prometheus.
+
+
+### Grafana Beyla
+Beyla is deployed as DeamonSet, meaning one Beyla pod runs on each cluster node. Thus ensures that complete coverage of all network traffic on every node. The pod runs with elevated priviliges required for eBPF operation:
+```
+hostPID: true
+    containers:
+        - name: beyla
+          image: grafana/beyla:latest
+          securityContext:
+            privileged: true
+```
+
+Beyla's configuration is porvided via a ConfigMap mounted at /k8s/observability/03-beyla.yaml. The configuration instructs Beyla to discover and monitor all services in the app namespace, and to expose Prometheus metrics on port 9090 at the /metrics path:
+```
+discovery:
+  services:
+    - k8s_namespace: app
+prometheus_export:
+  port: 9090
+  path: /metrics
+
+```
+
+The necessary RBAC permissions (ClusterRole and ClusterRoleBinding) allow Beyla to list and watch pods, services, nodes and replicasets across the cluster - information required for Kubernetes metadata enrichment of the captured telemetry.
+
+### Prometheus
+Prometheus is deployed as a single-replica Deployment in the observability namespace. It uses a dedicated ServiceAccount with a ClusterRole that grants read access to pods, services, endpoints and nodes. The scrape configuration uses Kubernetes service discovery (kubernetes_sd_configs with pod role) to automatically discover Beyla pods by thei label (app:beyla) and scrape their metrics every 15 seconds.
+
+```
+discovery:
+  services:
+    - k8s_namespace: app
+prometheus_export:
+  port: 9090
+  path: /metrics
+```
+
+### 5.4 Visualization Layer
+Grafana is deployed as a single-replica Deployment in the visualization namespace. It is configured through two ConfigMaps: one for the Prometheus datasource and one for the dashboard provider.
+The Prometheus datasource points to the in-cluster DNS addres of the Prometheus service:
+```http://prometheus.observability.svc.cluster.local:9090```
+
+Anonymous acces is enabled with Adming role to simplify demonstration.
+
+The beyla dashboard is automatically downloaded and provisioned at startup via an init container that fetches the dashboard JSON from grafana.com and replaces the datasource template variable with the provisioned Prometheus UID. This ensures the dashboard is immediately available without manual import.
+
+
+### 5.5 MCP Server
+The MCP Server is the bridge between the LLM and the Kubernetes cluster. It is implemented in PYthon using FastMCP library and deployed as a single-replica Deployment in the mcp namespace, exposed externally via a NodePort Service (nodePort: 30080). 
+
+The MCP Server exposes five tools to the LLM:
+
+- list_deployments
+- list_pods
+- scale_deployment
+- restart_deployment
+- set_loadgenerator
+
+The server runs using SSE (Server-Sent Events) to transport, making it accesible via HTTP at the /sse endpoint. This allows the prompt-service to connect and stream tool interacions.
+
+### 5.6 Prompt Service
+The prompt-service is a lightweight HTTP service running as a local Docker container (outside the Kubernetes cluster). It acts as the AI orchestration gateway, exposing a REST endpoint POST /prompt on port 8088.
+
+When a prompy is received, the service forwards it to Google Gemini 2.5 Flash together with available MCP tools discovered from the MCP server. The LLM then decides which tools to call, and the prompt-service executes those tool calls via the MCP servers's SSE endpoint. The final answer it returned to the caller.
+
+The service is configured via environment variables: GOOGLE_API_KEY for Gemini authentication, MCP_URL pointing to http://host.docker.internal:8000/sse (the MCP Server exposed by k3d), and GEMINI_MODEL specifying the model version.
+
+### 5.7 Namespace and Component Summary
+![alt text](images/components.png)
+
 ## 6. Environment configuration description
 
 ## 7. Installation method
