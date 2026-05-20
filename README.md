@@ -223,21 +223,65 @@ The prompt-service is configured entirely via environment variables passed at co
 ![alt text](images/prompt_service.png)
 
 
-## 7. Installation method
+## 7. Demo Deployment Steps
+This section provides a complete, step-by-step installation procedure for the demonstration environment.
 
+### Step 1: Create the k3d cluster
+This section provides a complete, step-by-step installation procedure for the demonstration environment.
+```
+k3d cluster delete beyla-lab
+k3d cluster create beyla-lab --agents 1 -p "8000:30080@server:0"
+kubectl config use-context k3d-beyla-lab
+```
 
-## 8. Demo deployment steps
+### Step 2: Deploy the Application
+```
+kubectl create namespace app
+kubectl apply -f .\k8s\app\online-boutique.yaml -n app
+```
 
-### 8a. Configuration set-up
+### Step 3: Deploy the Observability Stack
+```
+kubectl apply -f .\k8s\observability\
+```
+This deploys the observability namespace, Prometheus (with RBAC), and Beyla (DaemonSet with eBPF privileges).
 
-### 8b. Data preparation
+### Step 4: Deploy the Visualization Stack
+```
+kubectl apply -f .\k8s\visualization\
+```
+Access the Grafana dashboard by running the following command and navigating to http://localhost:3000:
+```
+kubectl port-forward svc/grafana 3000:80 -n visualization
+```
+### Step 5: Build and Deploy the MCP Server
+```
+docker build -t mcp-server:latest .\mcp-server -f .\mcp-server\Dockerfile
+k3d image import mcp-server:latest -c beyla-lab
+kubectl apply -f .\k8s\mcp\deploy.yaml
+```
 
-## 9. Demo description
+### Step 6: Set the Google API Key
+```
+$env:GOOGLE_API_KEY="your-gemini-api-key"
+```
 
-### 9a. Execution procedure
+### Step 7: Build and Run the Prompt Service
+```
+docker build -t prompt-service:latest .\mcp-server -f .\mcp-server\Dockerfile.prompt
+docker run --rm -p 8088:8088 `
+  -e GOOGLE_API_KEY=$env:GOOGLE_API_KEY `
+  -e MCP_URL=http://host.docker.internal:8000/sse `
+  -e GEMINI_MODEL=gemini-2.5-flash `
+  prompt-service:latest
+```
 
-### 9b. Results presentation
+## 8. Demo description
 
-### 10. Summary – conclusions
+### 8a. Execution procedure
 
-### 11. References
+### 8b. Results presentation
+
+### 9. Summary – conclusions
+
+### 10. References
