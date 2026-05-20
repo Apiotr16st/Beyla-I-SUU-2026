@@ -189,8 +189,42 @@ The service is configured via environment variables: GOOGLE_API_KEY for Gemini a
 ![alt text](images/components.png)
 
 ## 6. Environment configuration description
+This section describes the configuration of all components required to run the demonstration environment.
+
+### 6.1 Prerequisites
+The following tools must be installed on the host machine:
+•	Docker Desktop — for running k3d and the prompt-service container
+•	kubectl — for interacting with the Kubernetes cluster
+•	k3d — for creating the local Kubernetes cluster
+•	A Google Gemini API key — for LLM inference via the prompt-service
+
+### 6.2 Cluster Configuration
+The k3d cluster is created with a port mapping that exposes the MCP Server's NodePort (30080) on host port 8000. This eliminates the need for kubectl port-forward during operation:
+
+```k3d cluster create beyla-lab --agents 1 -p "8000:30080@server:0"```
+
+### 6.3 Beyla Configuration
+Beyla is configured via a ConfigMap (beyla-config.yml) with two key settings: service discovery scoped to the app namespace, and Prometheus metrics export on port 9090. The DaemonSet requires hostPID: true and privileged: true security context to attach eBPF probes to running processes.
+
+### 6.4 Prometheus Configuration
+Prometheus uses a static configuration file provided via ConfigMap. The scrape interval is set to 15 seconds. Service discovery is configured to find Beyla pods automatically using the Kubernetes pod discovery role and label-based filtering (app: beyla).
+
+### 6.5 Grafana Configuration
+Grafana is configured with two provisioned resources: a Prometheus datasource (pointing to the in-cluster Prometheus service) and a dashboard provider watching the /etc/grafana/dashboards directory. The Beyla dashboard is downloaded from grafana.com (ID 19923) by an init container during pod startup. Anonymous Admin access is enabled for demonstration purposes.
+
+### 6.6 MCP Server Configuration
+The MCP Server is configured via environment variables in the Kubernetes Deployment manifest. The DEFAULT_NAMESPACE is set to app, directing all Kubernetes operations to the application namespace by default. The server binds to 0.0.0.0:8000 and is exposed externally via NodePort 30080.
+
+![alt text](images/env_var.png)
+
+### 6.7 Prompt Service Configuration
+The prompt-service is configured entirely via environment variables passed at container startup:
+
+![alt text](images/prompt_service.png)
+
 
 ## 7. Installation method
+
 
 ## 8. Demo deployment steps
 
